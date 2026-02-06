@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Genesys Cloud Web Messaging</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        .info {
+            background-color: #e8f4f8;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        code {
+            background-color: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Genesys Cloud Web Messaging</h1>
+        <div class="info">
+            <strong>Queue routing:</strong> <span id="queueDisplay">Default queue</span>
+        </div>
+        <p>This page demonstrates Genesys Cloud web messaging with queue routing from URL parameters.</p>
+        <p>Add <code>?queue=YourQueueName</code> to the URL to route to a specific queue.</p>
+    </div>
+
+    <script>
+        // Get queue parameter from URL
+        function getUrlParameter(name) {
+            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+            var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+            var results = regex.exec(location.search);
+            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+        }
+
+        // Get queue from URL or use default
+        var queueName = getUrlParameter('queue') || 'default';
+        
+        // Display the queue being used
+        document.getElementById('queueDisplay').textContent = queueName;
+
+        // Genesys Cloud Web Messaging Configuration
+        (function (g, e, n, es, ys) {
+            g['_genesysJs'] = e;
+            g[e] = g[e] || function () {
+                (g[e].q = g[e].q || []).push(arguments)
+            };
+            g[e].t = 1 * new Date();
+            g[e].c = es;
+            ys = document.createElement('script'); 
+            ys.async = 1; 
+            ys.src = n; 
+            ys.charset = 'utf-8'; 
+            document.head.appendChild(ys);
+        })(window, 'Genesys', 'https://apps.mypurecloud.com/genesys-bootstrap/genesys.min.js', {
+            environment: 'prod-usw2',  // Change to your region: use1, usw2, euw1, apne2, etc.
+            deploymentId: 'c8027828-154c-4b1d-8b54-67b6e549f82f'  // Replace with your deployment ID
+        });
+
+        // Configure custom attributes with queue from URL
+        Genesys("subscribe", "Messenger.ready", function(){
+            Genesys("command", "Messenger.open");
+        });
+
+        // Set custom attributes when messenger is opened
+        Genesys("subscribe", "Messenger.opened", function(){
+            Genesys("command", "Database.set", {
+                messaging: {
+                    customAttributes: {
+                        queue: queueName
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
