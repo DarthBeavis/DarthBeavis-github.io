@@ -41,21 +41,21 @@
         <div class="info">
             <strong>Queue routing:</strong> <span id="queueDisplay">Default queue</span>
         </div>
-        <p>This page demonstrates Genesys Cloud web messaging with queue routing from URL parameters. V1 </p>
+        <p>This page demonstrates Genesys Cloud web messaging with queue routing from URL parameters. V2 </p>
         <p>Add <code>?queue=YourQueueName</code> to the URL to route to a specific queue.</p>
     </div>
 
     <script>
         // Get queue parameter from URL
-        function getUrlParameter(name) {
-            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
-            var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
-            var results = regex.exec(location.search);
-            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
-        }
+     //   function getUrlParameter(name) {
+       //    name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+        //    var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+         //   var results = regex.exec(location.search);
+        //    return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+    //    }
 
         // Get queue from URL or use default
-        var queueName = getUrlParameter('queue') || 'default';
+        var queueName = getUrlParameter('queue') || 'Test_Lead_1_Queue_Internally_Only';
         
         // Display the queue being used
         document.getElementById('queueDisplay').textContent = queueName;
@@ -88,7 +88,7 @@
             Genesys("command", "Database.set", {
                 messaging: {
                     customAttributes: {
-                        queue: queue
+                        queue: queueName
                     }
                 }
             });
@@ -96,5 +96,6 @@
     </script>
 </body>
 </html>
+
 
 
