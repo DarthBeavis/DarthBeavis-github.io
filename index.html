@@ -1,103 +1,262 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Genesys Cloud Web Messaging V1</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 50px auto;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        .container {
-            background-color: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        h1 {
-            color: #333;
-        }
-        .info {
-            background-color: #e8f4f8;
-            padding: 15px;
-            border-radius: 4px;
-            margin: 20px 0;
-        }
-        code {
-            background-color: #f0f0f0;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-family: monospace;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lead Chat</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #f0f2f5;
+      --surface:   #ffffff;
+      --border:    #dde1e7;
+      --accent:    #0066cc;
+      --text:      #1a1d23;
+      --muted:     #6b7280;
+      --ok:        #16a34a;
+      --warn:      #d97706;
+      --err:       #dc2626;
+      --radius:    6px;
+      --mono:      'Courier New', Courier, monospace;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 13px;
+      color: var(--text);
+    }
+
+    /* Status bar */
+    #status-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--muted);
+    }
+    #status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--warn);
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+    #status-dot.ready { background: var(--ok); }
+    #status-dot.error { background: var(--err); }
+    #status-text { flex: 1; }
+    #conv-id-display {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+      max-width: 240px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Context bar */
+    #context-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 5px 12px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    .ctx-item { display: flex; align-items: center; gap: 4px; }
+    .ctx-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+    }
+    .ctx-value { font-size: 12px; color: var(--text); font-weight: 500; }
+    .ctx-sep   { color: var(--border); font-size: 14px; }
+
+    /* Debug panel */
+    #debug-panel {
+      display: none;
+      padding: 6px 12px;
+      background: #fefce8;
+      border-bottom: 1px solid #fde68a;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: #713f12;
+      line-height: 1.6;
+    }
+    body.debug #debug-panel { display: block; }
+
+    /* Error overlay */
+    #error-overlay {
+      display: none;
+      padding: 20px;
+      text-align: center;
+      color: var(--err);
+    }
+    #error-overlay.visible { display: block; }
+    #error-overlay p { color: var(--muted); font-size: 12px; margin-top: 6px; }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Genesys Cloud Web Messaging</h1>
-        <div class="info">
-            <strong>Queue routing:</strong> <span id="queueDisplay">Default queue</span>
-        </div>
-        <p>This page demonstrates Genesys Cloud web messaging with queue routing from URL parameters. V3 </p>
-        <p>Add <code>?queue=YourQueueName</code> to the URL to route to a specific queue.</p>
+
+  <div id="status-bar">
+    <div id="status-dot"></div>
+    <span id="status-text">Initialising…</span>
+    <span id="conv-id-display"></span>
+  </div>
+
+  <div id="context-bar">
+    <div class="ctx-item">
+      <span class="ctx-label">Agent</span>
+      <span class="ctx-value" id="ctx-agent">—</span>
     </div>
+    <span class="ctx-sep">·</span>
+    <div class="ctx-item">
+      <span class="ctx-label">Queue</span>
+      <span class="ctx-value" id="ctx-queue">—</span>
+    </div>
+    <span class="ctx-sep">·</span>
+    <div class="ctx-item">
+      <span class="ctx-label">Source Conv</span>
+      <span class="ctx-value" id="ctx-source-conv" style="font-family:var(--mono);font-size:11px;">—</span>
+    </div>
+  </div>
 
-    <script>
-        // Get queue parameter from URL
-       function getUrlParameter(name) {
-           name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
-            var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
-           var results = regex.exec(location.search);
-            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
-        }
+  <div id="debug-panel"></div>
 
-        // Get queue from URL or use default
-        var queueName = getUrlParameter('queue') || 'Test_Lead_1_Queue_Internally_Only';
-        
-        // Display the queue being used
-        document.getElementById('queueDisplay').textContent = queueName;
+  <div id="error-overlay">
+    <h2>Widget failed to load</h2>
+    <p id="error-detail"></p>
+  </div>
 
-        // Genesys Cloud Web Messaging Configuration
-        (function (g, e, n, es, ys) {
-            g['_genesysJs'] = e;
-            g[e] = g[e] || function () {
-                (g[e].q = g[e].q || []).push(arguments)
-            };
-            g[e].t = 1 * new Date();
-            g[e].c = es;
-            ys = document.createElement('script'); 
-            ys.async = 1; 
-            ys.src = n; 
-            ys.charset = 'utf-8'; 
-            document.head.appendChild(ys);
-        })(window, 'Genesys', 'https://apps.mypurecloud.com/genesys-bootstrap/genesys.min.js', {
-            environment: 'prod-usw2',  // Change to your region: use1, usw2, euw1, apne2, etc.
-            deploymentId: 'c8027828-154c-4b1d-8b54-67b6e549f82f'  // Replace with your deployment ID
-        });
+  <script>
+    // ── URL parameter parser ───────────────────────────────────────────────────
+    function param(name) {
+      var rx = new RegExp('[?&]' + name.replace(/[[\]]/g, '\\$&') + '=([^&#]*)');
+      var m  = rx.exec(location.search);
+      return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : '';
+    }
 
-        // Configure custom attributes with queue from URL
-        Genesys("subscribe", "Messenger.ready", function(){
-            Genesys("command", "Messenger.open");
-        });
+    // ── Read params ────────────────────────────────────────────────────────────
+    var queueName      = param('queue')          || 'Test_Lead_1_Queue_Internally_Only';
+    var customerName   = param('customerName')   || '';   // initiating agent's name
+    var conversationId = param('conversationId') || '';   // initiating agent's source conv ID
+    var debugMode      = param('debug') === '1';
 
-        // Set custom attributes when messenger is opened
-        Genesys("subscribe", "Messenger.opened", function(){
-            Genesys("command", "Database.set", {
-                messaging: {
-                    customAttributes: {
-                        queue: queueName
-                    }
-                }
-            });
-        });
-    </script>
+    // ── Debug mode ─────────────────────────────────────────────────────────────
+    if (debugMode) document.body.classList.add('debug');
+
+    function dbg(msg) {
+      if (!debugMode) return;
+      document.getElementById('debug-panel').innerHTML += msg + '<br>';
+    }
+
+    // ── Populate context bar ───────────────────────────────────────────────────
+    document.getElementById('ctx-agent').textContent       = customerName   || '(not set)';
+    document.getElementById('ctx-queue').textContent       = queueName;
+    document.getElementById('ctx-source-conv').textContent = conversationId || '(not set)';
+
+    dbg('queue=' + queueName);
+    dbg('customerName=' + customerName);
+    dbg('conversationId=' + conversationId);
+
+    // ── Status helpers ─────────────────────────────────────────────────────────
+    function setStatus(state, text) {
+      document.getElementById('status-dot').className    = state;
+      document.getElementById('status-text').textContent = text;
+    }
+
+    function showError(detail) {
+      setStatus('error', 'Widget error');
+      var el = document.getElementById('error-overlay');
+      el.classList.add('visible');
+      document.getElementById('error-detail').textContent = detail;
+    }
+
+    // ── Custom attributes — only include non-empty values ──────────────────────
+    var customAttributes = { queue: queueName };
+    if (customerName)   customAttributes.customerName   = customerName;
+    if (conversationId) customAttributes.conversationId = conversationId;
+
+    dbg('customAttributes: ' + JSON.stringify(customAttributes));
+
+    // ── Genesys Cloud Web Messaging bootstrap ──────────────────────────────────
+    // TODO: replace deploymentId and environment with your org's values
+    (function (g, e, n, es, ys) {
+      g['_genesysJs'] = e;
+      g[e] = g[e] || function () { (g[e].q = g[e].q || []).push(arguments); };
+      g[e].t = 1 * new Date();
+      g[e].c = es;
+      ys = document.createElement('script');
+      ys.async   = 1;
+      ys.src     = n;
+      ys.charset = 'utf-8';
+      ys.onerror = function () { showError('Failed to load Genesys bootstrap script.'); };
+      document.head.appendChild(ys);
+    })(window, 'Genesys', 'https://apps.mypurecloud.com/genesys-bootstrap/genesys.min.js', {
+      environment:  'prod-usw2',                             // ← your region
+      deploymentId: 'c8027828-154c-4b1d-8b54-67b6e549f82f'  // ← your deployment ID
+    });
+
+    // ── Messenger.ready — set attributes then open ─────────────────────────────
+    Genesys('subscribe', 'Messenger.ready', function () {
+      dbg('Messenger.ready');
+      setStatus('', 'Connecting…');
+
+      Genesys('command', 'Database.set', {
+        messaging: { customAttributes: customAttributes }
+      },
+      function () {
+        dbg('Database.set OK');
+        Genesys('command', 'Messenger.open');
+      },
+      function (err) {
+        // Attributes failed — open anyway, routing falls back to default queue
+        dbg('Database.set FAILED: ' + JSON.stringify(err));
+        console.warn('[LeadChat] Database.set failed:', err);
+        Genesys('command', 'Messenger.open');
+      });
+    });
+
+    // ── Messenger.opened ───────────────────────────────────────────────────────
+    Genesys('subscribe', 'Messenger.opened', function () {
+      dbg('Messenger.opened');
+      setStatus('ready', 'Ready');
+    });
+
+    // ── Session / conversation started — capture new conversation ID ───────────
+    function captureConvId(e) {
+      var id = e.data && (
+        e.data.conversationId ||
+        (e.data.conversation && e.data.conversation.id)
+      );
+      if (id) {
+        document.getElementById('conv-id-display').textContent = 'Conv: ' + id;
+        dbg('conversationId captured: ' + id);
+      }
+    }
+
+    Genesys('subscribe', 'MessagingService.sessionStarted',     captureConvId);
+    Genesys('subscribe', 'MessagingService.conversationStarted', function (e) {
+      captureConvId(e);
+      setStatus('ready', 'Connected');
+    });
+
+    // ── Messages received (debug logging only) ─────────────────────────────────
+    Genesys('subscribe', 'MessagingService.messagesReceived', function (e) {
+      var msgs = e.data && e.data.messages;
+      if (!msgs) return;
+      msgs.forEach(function (msg) { dbg('[msg] ' + msg.channel + ': ' + msg.text); });
+    });
+
+  </script>
 </body>
 </html>
-
-
-
-
-
