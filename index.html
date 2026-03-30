@@ -206,9 +206,14 @@
       deploymentId: 'c8027828-154c-4b1d-8b54-67b6e549f82f'  // ← your deployment ID
     });
 
-    // ── Messenger.ready — set attributes then open ─────────────────────────────
+    // ── Messenger.ready — set attributes then open (one-shot guard) ───────────
+    var _initialized = false;
+
     Genesys('subscribe', 'Messenger.ready', function () {
-      dbg('Messenger.ready');
+      dbg('Messenger.ready (initialized=' + _initialized + ')');
+      if (_initialized) return;  // widget re-fires ready on re-render — ignore
+      _initialized = true;
+
       setStatus('', 'Connecting…');
 
       Genesys('command', 'Database.set', {
