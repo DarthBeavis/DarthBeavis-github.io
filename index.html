@@ -3,265 +3,234 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Lead Chat</title>
+  <title>CenterPoint Internal Lead Messaging</title>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --bg:        #f0f2f5;
-      --surface:   #ffffff;
-      --border:    #dde1e7;
-      --accent:    #0066cc;
-      --text:      #1a1d23;
-      --muted:     #6b7280;
-      --ok:        #16a34a;
-      --warn:      #d97706;
-      --err:       #dc2626;
-      --radius:    6px;
-      --mono:      'Courier New', Courier, monospace;
+      color-scheme: light dark;
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --text: #152033;
+      --muted: #5e6b85;
+      --border: #d8deea;
+      --accent: #2157d5;
+      --ok: #0b7a39;
+      --warn: #a05b00;
+      --error: #b3261e;
     }
-
-    html, body {
-      height: 100%;
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
       background: var(--bg);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      font-size: 13px;
       color: var(--text);
     }
-
-    /* Status bar */
-    #status-bar {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 12px;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
+    .wrap {
+      padding: 12px;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    h1 {
+      font-size: 18px;
+      margin: 0 0 8px;
+    }
+    .context {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .field {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px;
+      background: #fafcff;
+    }
+    .field.hidden {
+      display: none;
+    }
+    .label {
       font-size: 11px;
       color: var(--muted);
-    }
-    #status-dot {
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      background: var(--warn);
-      flex-shrink: 0;
-      transition: background 0.3s;
-    }
-    #status-dot.ready { background: var(--ok); }
-    #status-dot.error { background: var(--err); }
-    #status-text { flex: 1; }
-    #conv-id-display {
-      font-family: var(--mono);
-      font-size: 10px;
-      color: var(--muted);
-      max-width: 240px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    /* Context bar */
-    #context-bar {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 5px 12px;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      flex-wrap: wrap;
-    }
-    .ctx-item { display: flex; align-items: center; gap: 4px; }
-    .ctx-label {
-      font-size: 10px;
-      font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.04em;
+      margin-bottom: 4px;
+    }
+    .value {
+      font-size: 14px;
+      word-break: break-word;
+    }
+    .status {
+      margin: 10px 0 0;
+      font-size: 13px;
       color: var(--muted);
     }
-    .ctx-value { font-size: 12px; color: var(--text); font-weight: 500; }
-    .ctx-sep   { color: var(--border); font-size: 14px; }
-
-    /* Debug panel */
-    #debug-panel {
-      display: none;
-      padding: 6px 12px;
-      background: #fefce8;
-      border-bottom: 1px solid #fde68a;
-      font-family: var(--mono);
-      font-size: 10px;
-      color: #713f12;
-      line-height: 1.6;
+    .status.ok { color: var(--ok); }
+    .status.warn { color: var(--warn); }
+    .status.error { color: var(--error); }
+    #genesys-messenger {
+      min-height: 540px;
+      margin-top: 12px;
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      background: #fff;
     }
-    body.debug #debug-panel { display: block; }
-
-    /* Error overlay */
-    #error-overlay {
-      display: none;
-      padding: 20px;
-      text-align: center;
-      color: var(--err);
-    }
-    #error-overlay.visible { display: block; }
-    #error-overlay p { color: var(--muted); font-size: 12px; margin-top: 6px; }
   </style>
 </head>
 <body>
-
-  <div id="status-bar">
-    <div id="status-dot"></div>
-    <span id="status-text">Initialising…</span>
-    <span id="conv-id-display"></span>
-  </div>
-
-  <div id="context-bar">
-    <div class="ctx-item">
-      <span class="ctx-label">Agent</span>
-      <span class="ctx-value" id="ctx-agent">—</span>
+  <div class="wrap">
+    <div class="card">
+      <h1>Internal Lead Messaging</h1>
+      <div class="context">
+        <div class="field" id="queueField"><div class="label">Queue</div><div class="value" id="queueValue"></div></div>
+        <div class="field" id="subjectField"><div class="label">Subject</div><div class="value" id="subjectValue"></div></div>
+        <div class="field" id="agentNameField"><div class="label">Agent</div><div class="value" id="agentNameValue"></div></div>
+        <div class="field" id="employeeIdField"><div class="label">Employee ID</div><div class="value" id="employeeIdValue"></div></div>
+        <div class="field" id="originalConversationIdField" style="grid-column: 1 / -1;"><div class="label">Original Conversation ID</div><div class="value" id="originalConversationIdValue"></div></div>
+        <div class="field" id="leadConversationIdField" style="grid-column: 1 / -1;"><div class="label">Lead Conversation ID</div><div class="value" id="leadConversationIdValue">Waiting for session start...</div></div>
+      </div>
+      <div id="status" class="status">Loading messaging widget...</div>
+      <div id="genesys-messenger"></div>
     </div>
-    <span class="ctx-sep">·</span>
-    <div class="ctx-item">
-      <span class="ctx-label">Queue</span>
-      <span class="ctx-value" id="ctx-queue">—</span>
-    </div>
-    <span class="ctx-sep">·</span>
-    <div class="ctx-item">
-      <span class="ctx-label">Source Conv</span>
-      <span class="ctx-value" id="ctx-source-conv" style="font-family:var(--mono);font-size:11px;">—</span>
-    </div>
-  </div>
-
-  <div id="debug-panel"></div>
-
-  <div id="error-overlay">
-    <h2>Widget failed to load</h2>
-    <p id="error-detail"></p>
   </div>
 
   <script>
-    // ── URL parameter parser ───────────────────────────────────────────────────
-    function param(name) {
-      var rx = new RegExp('[?&]' + name.replace(/[[\]]/g, '\\$&') + '=([^&#]*)');
-      var m  = rx.exec(location.search);
-      return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : '';
-    }
+    (function () {
+      const params = new URLSearchParams(window.location.search);
+      const config = {
+        queue: (params.get('queue') || '').trim(),
+        agentName: (params.get('agentName') || '').trim(),
+        employeeId: (params.get('employeeId') || '').trim(),
+        subject: (params.get('subject') || '').trim(),
+        originalConversationId: (params.get('originalConversationId') || '').trim()
+      };
 
-    // ── Read params ────────────────────────────────────────────────────────────
-    var queueName      = param('queue')          || 'Test_Lead_1_Queue_Internally_Only';
-    var customerName   = param('customerName')   || '';   // initiating agent's name
-    var conversationId = param('conversationId') || '';   // initiating agent's source conv ID
-    var debugMode      = param('debug') === '1';
+      const statusEl = document.getElementById('status');
 
-    // ── Debug mode ─────────────────────────────────────────────────────────────
-    if (debugMode) document.body.classList.add('debug');
-
-    function dbg(msg) {
-      if (!debugMode) return;
-      document.getElementById('debug-panel').innerHTML += msg + '<br>';
-    }
-
-    // ── Populate context bar ───────────────────────────────────────────────────
-    document.getElementById('ctx-agent').textContent       = customerName   || '(not set)';
-    document.getElementById('ctx-queue').textContent       = queueName;
-    document.getElementById('ctx-source-conv').textContent = conversationId || '(not set)';
-
-    dbg('queue=' + queueName);
-    dbg('customerName=' + customerName);
-    dbg('conversationId=' + conversationId);
-
-    // ── Status helpers ─────────────────────────────────────────────────────────
-    function setStatus(state, text) {
-      document.getElementById('status-dot').className    = state;
-      document.getElementById('status-text').textContent = text;
-    }
-
-    function showError(detail) {
-      setStatus('error', 'Widget error');
-      var el = document.getElementById('error-overlay');
-      el.classList.add('visible');
-      document.getElementById('error-detail').textContent = detail;
-    }
-
-    // ── Custom attributes — only include non-empty values ──────────────────────
-    var customAttributes = { queue: queueName };
-    if (customerName)   customAttributes.customerName   = customerName;
-    if (conversationId) customAttributes.conversationId = conversationId;
-
-    dbg('customAttributes: ' + JSON.stringify(customAttributes));
-
-    // ── Genesys Cloud Web Messaging bootstrap ──────────────────────────────────
-    // TODO: replace deploymentId and environment with your org's values
-    (function (g, e, n, es, ys) {
-      g['_genesysJs'] = e;
-      g[e] = g[e] || function () { (g[e].q = g[e].q || []).push(arguments); };
-      g[e].t = 1 * new Date();
-      g[e].c = es;
-      ys = document.createElement('script');
-      ys.async   = 1;
-      ys.src     = n;
-      ys.charset = 'utf-8';
-      ys.onerror = function () { showError('Failed to load Genesys bootstrap script.'); };
-      document.head.appendChild(ys);
-    })(window, 'Genesys', 'https://apps.mypurecloud.com/genesys-bootstrap/genesys.min.js', {
-      environment:  'prod-usw2',                             // ← your region
-      deploymentId: 'c8027828-154c-4b1d-8b54-67b6e549f82f'  // ← your deployment ID
-    });
-
-    // ── Messenger.ready — set attributes then open (one-shot guard) ───────────
-    var _initialized = false;
-
-    Genesys('subscribe', 'Messenger.ready', function () {
-      dbg('Messenger.ready (initialized=' + _initialized + ')');
-      if (_initialized) return;  // widget re-fires ready on re-render — ignore
-      _initialized = true;
-
-      setStatus('', 'Connecting…');
-
-      Genesys('command', 'Database.set', {
-        messaging: { customAttributes: customAttributes }
-      },
-      function () {
-        dbg('Database.set OK');
-        Genesys('command', 'Messenger.open');
-      },
-      function (err) {
-        // Attributes failed — open anyway, routing falls back to default queue
-        dbg('Database.set FAILED: ' + JSON.stringify(err));
-        console.warn('[LeadChat] Database.set failed:', err);
-        Genesys('command', 'Messenger.open');
-      });
-    });
-
-    // ── Messenger.opened ───────────────────────────────────────────────────────
-    Genesys('subscribe', 'Messenger.opened', function () {
-      dbg('Messenger.opened');
-      setStatus('ready', 'Ready');
-    });
-
-    // ── Session / conversation started — capture new conversation ID ───────────
-    function captureConvId(e) {
-      var id = e.data && (
-        e.data.conversationId ||
-        (e.data.conversation && e.data.conversation.id)
-      );
-      if (id) {
-        document.getElementById('conv-id-display').textContent = 'Conv: ' + id;
-        dbg('conversationId captured: ' + id);
+      function setStatus(message, cssClass) {
+        statusEl.textContent = message;
+        statusEl.className = 'status' + (cssClass ? ' ' + cssClass : '');
       }
-    }
 
-    Genesys('subscribe', 'MessagingService.sessionStarted',     captureConvId);
-    Genesys('subscribe', 'MessagingService.conversationStarted', function (e) {
-      captureConvId(e);
-      setStatus('ready', 'Connected');
+      function bindField(fieldId, valueId, value) {
+        const field = document.getElementById(fieldId);
+        const target = document.getElementById(valueId);
+        if (!value) {
+          field.classList.add('hidden');
+          return;
+        }
+        target.textContent = value;
+      }
+
+      bindField('queueField', 'queueValue', config.queue);
+      bindField('subjectField', 'subjectValue', config.subject);
+      bindField('agentNameField', 'agentNameValue', config.agentName);
+      bindField('employeeIdField', 'employeeIdValue', config.employeeId);
+      bindField('originalConversationIdField', 'originalConversationIdValue', config.originalConversationId);
+
+      window.__internalLeadMessaging = {
+        latestLeadConversationId: ''
+      };
+
+      window._genesys = {
+        widgets: {
+          webchat: {
+            transport: {
+              type: 'purecloud-v2-sockets'
+            }
+          }
+        }
+      };
+
+      function databaseSet(key, value) {
+        return new Promise(function (resolve, reject) {
+          try {
+            Genesys('command', 'Database.set', { messaging: { customAttributes: { [key]: value } } }, resolve, reject);
+          } catch (error) {
+            reject(error);
+          }
+        });
+      }
+
+      function openMessenger() {
+        return new Promise(function (resolve, reject) {
+          try {
+            Genesys('command', 'Messenger.open', {}, resolve, reject);
+          } catch (error) {
+            reject(error);
+          }
+        });
+      }
+
+      async function initializeCustomAttributes() {
+        const attrs = {
+          queue: config.queue,
+          agentName: config.agentName,
+          employeeId: config.employeeId,
+          subject: config.subject,
+          originalConversationId: config.originalConversationId
+        };
+
+        const entries = Object.entries(attrs).filter(function (entry) {
+          return !!entry[1];
+        });
+
+        for (const entry of entries) {
+          await databaseSet(entry[0], entry[1]);
+        }
+      }
+
+      window.Genesys = window.Genesys || function () {
+        (window.Genesys.q = window.Genesys.q || []).push(arguments);
+      };
+
+      Genesys('subscribe', 'MessagingService.sessionStarted', function (event) {
+        const conversationId = event && event.data && event.data.conversationId ? event.data.conversationId : '';
+        if (conversationId) {
+          window.__internalLeadMessaging.latestLeadConversationId = conversationId;
+          document.getElementById('leadConversationIdValue').textContent = conversationId;
+          setStatus('Messaging session started.', 'ok');
+        }
+      });
+
+      Genesys('subscribe', 'MessagingService.conversationStarted', function (event) {
+        const conversationId = event && event.data && event.data.conversationId ? event.data.conversationId : '';
+        if (conversationId) {
+          window.__internalLeadMessaging.latestLeadConversationId = conversationId;
+          document.getElementById('leadConversationIdValue').textContent = conversationId;
+          setStatus('Conversation started and waiting for Architect routing.', 'ok');
+        }
+      });
+
+      Genesys('subscribe', 'MessagingService.ready', async function () {
+        try {
+          setStatus('Messenger ready. Applying conversation attributes...', 'warn');
+          await initializeCustomAttributes();
+          setStatus('Attributes set. Opening messenger...', 'warn');
+          await openMessenger();
+          setStatus('Messenger opened.', 'ok');
+        } catch (error) {
+          console.error('Widget initialization error', error);
+          setStatus('Failed to initialize messenger: ' + (error.message || String(error)), 'error');
+        }
+      });
+    })();
+  </script>
+
+  <!-- Replace the following deployment key URL/value with your actual Genesys Web Messaging snippet. -->
+  <script src="https://apps.usw2.pure.cloud/genesys-bootstrap/genesys.min.js" defer></script>
+  <script>
+    window.Genesys = window.Genesys || function () {
+      (window.Genesys.q = window.Genesys.q || []).push(arguments);
+    };
+    Genesys('command', 'Messenger.configure', {
+      deploymentId: 'c8027828-154c-4b1d-8b54-67b6e549f82f',
+      environment: 'prod-usw2'
     });
-
-    // ── Messages received (debug logging only) ─────────────────────────────────
-    Genesys('subscribe', 'MessagingService.messagesReceived', function (e) {
-      var msgs = e.data && e.data.messages;
-      if (!msgs) return;
-      msgs.forEach(function (msg) { dbg('[msg] ' + msg.channel + ': ' + msg.text); });
-    });
-
   </script>
 </body>
 </html>
+
