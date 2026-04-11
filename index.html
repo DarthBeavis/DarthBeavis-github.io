@@ -6,7 +6,6 @@
   <title>CenterPoint Internal Lead Messaging</title>
   <style>
     :root {
-      color-scheme: light dark;
       --bg: #f5f7fb;
       --panel: #ffffff;
       --text: #152033;
@@ -17,6 +16,10 @@
       --error: #b3261e;
     }
 
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
       font-family: Arial, Helvetica, sans-serif;
@@ -25,38 +28,43 @@
     }
 
     .wrap {
-      padding: 12px;
+      padding: 16px;
     }
 
     .card {
+      max-width: 1100px;
       background: var(--panel);
       border: 1px solid var(--border);
       border-radius: 10px;
-      padding: 12px;
+      padding: 16px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.06);
     }
 
     h1 {
-      font-size: 18px;
-      margin: 0 0 8px;
+      font-size: 20px;
+      margin: 0 0 12px;
     }
 
     .context {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 8px;
-      margin-bottom: 12px;
+      grid-template-columns: repeat(2, minmax(220px, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
     }
 
     .field {
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 8px;
+      padding: 10px;
       background: #fafcff;
     }
 
     .field.hidden {
       display: none;
+    }
+
+    .field.full {
+      grid-column: 1 / -1;
     }
 
     .label {
@@ -73,7 +81,7 @@
     }
 
     .status {
-      margin: 10px 0 0;
+      margin: 0 0 12px;
       font-size: 13px;
       color: var(--muted);
     }
@@ -83,11 +91,11 @@
     .status.error { color: var(--error); }
 
     #genesys-messenger {
-      min-height: 540px;
-      margin-top: 12px;
+      min-height: 560px;
       border: 1px dashed var(--border);
       border-radius: 8px;
       background: #fff;
+      padding: 8px;
     }
   </style>
 </head>
@@ -117,12 +125,12 @@
           <div class="value" id="employeeIdValue"></div>
         </div>
 
-        <div class="field" id="originalConversationIdField" style="grid-column: 1 / -1;">
+        <div class="field full" id="originalConversationIdField">
           <div class="label">Original Conversation ID</div>
           <div class="value" id="originalConversationIdValue"></div>
         </div>
 
-        <div class="field hidden" id="leadConversationIdField" style="grid-column: 1 / -1;">
+        <div class="field full hidden" id="leadConversationIdField">
           <div class="label">Lead Conversation ID</div>
           <div class="value" id="leadConversationIdValue"></div>
         </div>
@@ -175,10 +183,6 @@
       bindField("employeeIdField", "employeeIdValue", config.employeeId);
       bindField("originalConversationIdField", "originalConversationIdValue", config.originalConversationId);
 
-      window.__internalLeadMessaging = {
-        latestLeadConversationId: ""
-      };
-
       function showLeadConversationId(conversationId) {
         const field = document.getElementById("leadConversationIdField");
         const value = document.getElementById("leadConversationIdValue");
@@ -218,7 +222,6 @@
 
         for (const [key, value] of Object.entries(attrs)) {
           if (!value) continue;
-          console.log("Setting custom attribute:", key, value);
           await dbSetAttribute(key, value);
         }
       }
@@ -227,7 +230,6 @@
         try {
           setStatus("Messenger ready. Applying conversation attributes...", "warn");
           await setConversationAttributes();
-          setStatus("Attributes applied. Opening messenger...", "warn");
 
           Genesys(
             "command",
@@ -249,10 +251,7 @@
 
       Genesys("subscribe", "MessagingService.conversationStarted", function (event) {
         const conversationId = event && event.data && event.data.conversationId ? event.data.conversationId : "";
-        console.log("conversationStarted", event);
-
         if (conversationId) {
-          window.__internalLeadMessaging.latestLeadConversationId = conversationId;
           showLeadConversationId(conversationId);
           setStatus("Conversation started.", "ok");
         }
@@ -260,10 +259,7 @@
 
       Genesys("subscribe", "MessagingService.sessionStarted", function (event) {
         const conversationId = event && event.data && event.data.conversationId ? event.data.conversationId : "";
-        console.log("sessionStarted", event);
-
         if (conversationId) {
-          window.__internalLeadMessaging.latestLeadConversationId = conversationId;
           showLeadConversationId(conversationId);
         }
       });
