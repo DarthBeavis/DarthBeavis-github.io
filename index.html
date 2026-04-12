@@ -68,22 +68,24 @@
     }
   </style>
 
-  <!-- 🔥 TamperMonkey-style Genesys snippet -->
   <script>
-  (function (g, e, n, es, ys) {
-    g['_genesysJs'] = e;
-    g[e] = g[e] || function () {
-      (g[e].q = g[e].q || []).push(arguments)
-    };
-    g[e].t = 1 * new Date();
-    g[e].c = es;
-    ys = document.createElement('script'); ys.async = 1; ys.src = n; ys.charset = 'utf-8'; document.head.appendChild(ys);
-  })(window, 'Genesys', 'https://apps.usw2.pure.cloud/genesys-bootstrap/genesys.min.js', {
-    environment: 'prod-usw2',
-    deploymentId: 'c8027828-154c-4b1d-8b54-67b6e549f82f'
-  });
+    (function (g, e, n, es, ys) {
+      g['_genesysJs'] = e;
+      g[e] = g[e] || function () {
+        (g[e].q = g[e].q || []).push(arguments);
+      };
+      g[e].t = 1 * new Date();
+      g[e].c = es;
+      ys = document.createElement('script');
+      ys.async = 1;
+      ys.src = n;
+      ys.charset = 'utf-8';
+      document.head.appendChild(ys);
+    })(window, 'Genesys', 'https://apps.usw2.pure.cloud/genesys-bootstrap/genesys.min.js', {
+      environment: 'prod-usw2',
+      deploymentId: 'c8027828-154c-4b1d-8b54-67b6e549f82f'
+    });
   </script>
-
 </head>
 
 <body>
@@ -97,4 +99,84 @@
           <div class="value" id="queueValue"></div>
         </div>
 
-        <div
+        <div class="field" id="subjectField">
+          <div class="label">Subject</div>
+          <div class="value" id="subjectValue"></div>
+        </div>
+
+        <div class="field" id="agentNameField">
+          <div class="label">Agent</div>
+          <div class="value" id="agentNameValue"></div>
+        </div>
+
+        <div class="field" id="employeeIdField">
+          <div class="label">Employee ID</div>
+          <div class="value" id="employeeIdValue"></div>
+        </div>
+
+        <div class="field" id="originalConversationIdField" style="grid-column:1/-1;">
+          <div class="label">Original Conversation ID</div>
+          <div class="value" id="originalConversationIdValue"></div>
+        </div>
+      </div>
+
+      <div id="status" class="status">Loading widget...</div>
+      <div id="genesys-messenger"></div>
+    </div>
+  </div>
+
+  <script>
+    console.log("Widget loading...");
+
+    const params = new URLSearchParams(window.location.search);
+
+    const config = {
+      queue: (params.get("queue") || "").trim(),
+      agentName: (params.get("agentName") || "").trim(),
+      employeeId: (params.get("employeeId") || "").trim(),
+      subject: (params.get("subject") || "").trim(),
+      originalConversationId: (params.get("originalConversationId") || "").trim()
+    };
+
+    function bind(id, value) {
+      if (!value) return;
+      const el = document.getElementById(id);
+      if (el) el.innerText = value;
+    }
+
+    function setStatus(msg) {
+      const el = document.getElementById("status");
+      if (el) el.innerText = msg;
+      console.log(msg);
+    }
+
+    bind("queueValue", config.queue);
+    bind("subjectValue", config.subject);
+    bind("agentNameValue", config.agentName);
+    bind("employeeIdValue", config.employeeId);
+    bind("originalConversationIdValue", config.originalConversationId);
+
+    Genesys("subscribe", "MessagingService.ready", function () {
+      try {
+        console.log("Setting conversation attributes...", config);
+
+        Genesys("command", "Messenger.setConversationAttributes", {
+          customAttributes: {
+            queue: config.queue,
+            agentName: config.agentName,
+            employeeId: config.employeeId,
+            subject: config.subject,
+            originalConversationId: config.originalConversationId
+          }
+        });
+
+        setStatus("Opening messenger...");
+        Genesys("command", "Messenger.open");
+      } catch (e) {
+        console.error(e);
+        setStatus("Error initializing widget");
+      }
+    });
+  </script>
+</body>
+</html>
