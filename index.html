@@ -2,22 +2,103 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>LeadChat</title>
-</head>
-<body>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CenterPoint Internal Lead Messaging</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f5f7fb;
+    }
+
+    .wrap {
+      padding: 16px;
+    }
+
+    .card {
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 16px;
+      max-width: 900px;
+    }
+
+    h1 {
+      margin-top: 0;
+    }
+
+    .context {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .field {
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 8px;
+      background: #fafcff;
+    }
+
+    .field.hidden {
+      display: none;
+    }
+
+    .label {
+      font-size: 11px;
+      color: #666;
+      margin-bottom: 3px;
+    }
+
+    .value {
+      font-size: 14px;
+    }
+
+    .status {
+      margin-bottom: 10px;
+      font-size: 13px;
+    }
+
+    #genesys-messenger {
+      min-height: 500px;
+      border: 1px dashed #ccc;
+      border-radius: 8px;
+    }
+  </style>
+
+  <!-- 🔥 TamperMonkey-style Genesys snippet -->
   <script>
-  (function (g, e, n, es, ys) {
-    g['_genesysJs'] = e;
-    g[e] = g[e] || function () {
-      (g[e].q = g[e].q || []).push(arguments)
-    };
-    g[e].t = 1 * new Date();
-    g[e].c = es;
-    ys = document.createElement('script'); ys.async = 1; ys.src = n; ys.charset = 'utf-8'; document.head.appendChild(ys);
-  })(window, 'Genesys', 'https://apps.usw2.pure.cloud/genesys-bootstrap/genesys.min.js', {
-    environment: 'prod-usw2',
-    deploymentId: 'c8027828-154c-4b1d-8b54-67b6e549f82f'
-  });
+    (function (g, e, n, es, ys) {
+      g['_genesysJs'] = e;
+      g[e] = g[e] || function () {
+        (g[e].q = g[e].q || []).push(arguments);
+      };
+      g[e].t = 1 * new Date();
+      g[e].c = es;
+      ys = document.createElement('script');
+      ys.async = 1;
+      ys.src = n;
+      ys.charset = 'utf-8';
+      document.head.appendChild(ys);
+    })(window, 'Genesys', 'https://apps.usw2.pure.cloud/genesys-bootstrap/genesys.min.js', {
+      environment: 'prod',
+      deploymentId: 'c8027828-154c-4b1d-8b54-67b6e549f82f'
+    });
   </script>
-</body>
-</html>
+
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Internal Lead Messaging</h1>
+
+      <div class="context">
+        <div class="field" id="queueField">
+          <div class="label">Queue</div>
+          <div class="value" id="queueValue"></div>
+        </div>
+
+        <div
