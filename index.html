@@ -73,7 +73,7 @@
 
       var params = new URLSearchParams(window.location.search);
       var config = {
-        leadQueue:              (params.get('queue')                  || '').trim(),
+        queue:                  (params.get('queue')                  || '').trim(),
         agentName:              (params.get('agentName')              || '').trim(),
         employeeId:             (params.get('employeeId')             || '').trim(),
         subject:                (params.get('subject')                || '').trim(),
@@ -95,7 +95,7 @@
         field.classList.remove('hidden');
       }
 
-      bindField('queueField',                  'queueValue',                  config.leadQueue);
+      bindField('queueField',                  'queueValue',                  config.queue);
       bindField('subjectField',                'subjectValue',                config.subject);
       bindField('agentNameField',              'agentNameValue',              config.agentName);
       bindField('employeeIdField',             'employeeIdValue',             config.employeeId);
@@ -111,7 +111,7 @@
 
       async function setConversationAttributes() {
         var attrs = {
-          leadQueue:              config.leadQueue,
+          queue:                  config.queue,
           agentName:              config.agentName,
           employeeId:             config.employeeId,
           subject:                config.subject,
@@ -134,13 +134,6 @@
           return;
         }
         _initialized = true;
-        setStatus('Messenger ready. Clearing previous session...');
-        // Clear any stored session to force a fresh conversation
-        try {
-          await new Promise(function(r) {
-            Genesys('command', 'Database.clear', { messaging: {} }, r, r);
-          });
-        } catch(e) { console.log('[LeadChat] Database.clear:', e); }
         setStatus('Messenger ready. Setting attributes...');
         await setConversationAttributes();
         Genesys('command', 'Messenger.open', {}, function () {
