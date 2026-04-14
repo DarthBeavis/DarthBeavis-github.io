@@ -4,76 +4,23 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CenterPoint Internal Lead Messaging</title>
-
   <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f5f7fb;
-    }
-
-    .wrap {
-      padding: 16px;
-    }
-
-    .card {
-      background: white;
-      border: 1px solid #ddd;
-      border-radius: 10px;
-      padding: 16px;
-      max-width: 900px;
-    }
-
-    h1 {
-      margin-top: 0;
-    }
-
-    .context {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-      margin-bottom: 15px;
-    }
-
-    .field {
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      padding: 8px;
-      background: #fafcff;
-    }
-
-    .field.hidden {
-      display: none;
-    }
-
-    .label {
-      font-size: 11px;
-      color: #666;
-      margin-bottom: 3px;
-    }
-
-    .value {
-      font-size: 14px;
-    }
-
-    .status {
-      margin-bottom: 10px;
-      font-size: 13px;
-    }
-
-    #genesys-messenger {
-      min-height: 500px;
-      border: 1px dashed #ccc;
-      border-radius: 8px;
-    }
+    body { margin: 0; font-family: Arial, sans-serif; background: #f5f7fb; }
+    .wrap { padding: 16px; }
+    .card { background: white; border: 1px solid #ddd; border-radius: 10px; padding: 16px; max-width: 900px; }
+    h1 { margin-top: 0; }
+    .context { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px; }
+    .field { border: 1px solid #ddd; border-radius: 6px; padding: 8px; background: #fafcff; }
+    .field.hidden { display: none; }
+    .label { font-size: 11px; color: #666; margin-bottom: 3px; }
+    .value { font-size: 14px; }
+    .status { margin-bottom: 10px; font-size: 13px; }
+    #genesys-messenger { min-height: 500px; border: 1px dashed #ccc; border-radius: 8px; }
   </style>
-
   <script>
     (function (g, e, n, es, ys) {
       g['_genesysJs'] = e;
-      g[e] = g[e] || function () {
-        (g[e].q = g[e].q || []).push(arguments);
-      };
+      g[e] = g[e] || function () { (g[e].q = g[e].q || []).push(arguments); };
       g[e].t = 1 * new Date();
       g[e].c = es;
       ys = document.createElement('script');
@@ -87,96 +34,142 @@
     });
   </script>
 </head>
-
 <body>
   <div class="wrap">
     <div class="card">
       <h1>Internal Lead Messaging</h1>
-
       <div class="context">
-        <div class="field" id="queueField">
+        <div class="field hidden" id="queueField">
           <div class="label">Queue</div>
           <div class="value" id="queueValue"></div>
         </div>
-
-        <div class="field" id="subjectField">
+        <div class="field hidden" id="subjectField">
           <div class="label">Subject</div>
           <div class="value" id="subjectValue"></div>
         </div>
-
-        <div class="field" id="agentNameField">
+        <div class="field hidden" id="agentNameField">
           <div class="label">Agent</div>
           <div class="value" id="agentNameValue"></div>
         </div>
-
-        <div class="field" id="employeeIdField">
+        <div class="field hidden" id="employeeIdField">
           <div class="label">Employee ID</div>
           <div class="value" id="employeeIdValue"></div>
         </div>
-
-        <div class="field" id="originalConversationIdField" style="grid-column:1/-1;">
+        <div class="field hidden" id="originalConversationIdField" style="grid-column:1/-1;">
           <div class="label">Original Conversation ID</div>
           <div class="value" id="originalConversationIdValue"></div>
         </div>
       </div>
-
       <div id="status" class="status">Loading widget...</div>
       <div id="genesys-messenger"></div>
     </div>
   </div>
 
   <script>
-    console.log("Widget loading...");
+    (function () {
+      'use strict';
 
-    const params = new URLSearchParams(window.location.search);
+      var _initialized = false;
 
-    const config = {
-      queue: (params.get("queue") || "").trim(),
-      agentName: (params.get("agentName") || "").trim(),
-      employeeId: (params.get("employeeId") || "").trim(),
-      subject: (params.get("subject") || "").trim(),
-      originalConversationId: (params.get("originalConversationId") || "").trim()
-    };
+      var params = new URLSearchParams(window.location.search);
+      var config = {
+        queue:                  (params.get('queue')                  || '').trim(),
+        agentName:              (params.get('agentName')              || '').trim(),
+        employeeId:             (params.get('employeeId')             || '').trim(),
+        subject:                (params.get('subject')                || '').trim(),
+        originalConversationId: (params.get('originalConversationId') || '').trim()
+      };
 
-    function bind(id, value) {
-      if (!value) return;
-      const el = document.getElementById(id);
-      if (el) el.innerText = value;
-    }
-
-    function setStatus(msg) {
-      const el = document.getElementById("status");
-      if (el) el.innerText = msg;
-      console.log(msg);
-    }
-
-    bind("queueValue", config.queue);
-    bind("subjectValue", config.subject);
-    bind("agentNameValue", config.agentName);
-    bind("employeeIdValue", config.employeeId);
-    bind("originalConversationIdValue", config.originalConversationId);
-
-    Genesys("subscribe", "MessagingService.ready", function () {
-      try {
-        console.log("Setting conversation attributes...", config);
-
-        Genesys("command", "Messenger.setConversationAttributes", {
-          customAttributes: {
-            queue: config.queue,
-            agentName: config.agentName,
-            employeeId: config.employeeId,
-            subject: config.subject,
-            originalConversationId: config.originalConversationId
-          }
-        });
-
-        setStatus("Opening messenger...");
-        Genesys("command", "Messenger.open");
-      } catch (e) {
-        console.error(e);
-        setStatus("Error initializing widget");
+      function setStatus(msg) {
+        var el = document.getElementById('status');
+        if (el) el.innerText = msg;
+        console.log('[LeadChat]', msg);
       }
-    });
+
+      function bindField(fieldId, valueId, value) {
+        var field  = document.getElementById(fieldId);
+        var target = document.getElementById(valueId);
+        if (!field || !target) return;
+        if (!value) { field.classList.add('hidden'); return; }
+        target.textContent = value;
+        field.classList.remove('hidden');
+      }
+
+      bindField('queueField',                  'queueValue',                  config.queue);
+      bindField('subjectField',                'subjectValue',                config.subject);
+      bindField('agentNameField',              'agentNameValue',              config.agentName);
+      bindField('employeeIdField',             'employeeIdValue',             config.employeeId);
+      bindField('originalConversationIdField', 'originalConversationIdValue', config.originalConversationId);
+
+      function showLeadConversationId(conversationId) {
+        if (!conversationId) return;
+        var field = document.getElementById('leadConversationIdField');
+        var value = document.getElementById('leadConversationIdValue');
+        if (field && value) {
+          value.textContent = conversationId;
+          field.classList.remove('hidden');
+        }
+      }
+
+      function dbSetAttribute(key, value) {
+        return new Promise(function (resolve, reject) {
+          Genesys('command', 'Database.set', {
+            messaging: { customAttributes: { [key]: value } }
+          }, resolve, reject);
+        });
+      }
+
+      async function setConversationAttributes() {
+        var attrs = {
+          queue:                  config.queue,
+          agentName:              config.agentName,
+          employeeId:             config.employeeId,
+          subject:                config.subject,
+          originalConversationId: config.originalConversationId
+        };
+        for (var [key, value] of Object.entries(attrs)) {
+          if (!value) continue;
+          await dbSetAttribute(key, value);
+        }
+      }
+
+      Genesys('subscribe', 'Messenger.ready', async function () {
+        if (_initialized) {
+          console.log('[LeadChat] Messenger.ready fired again — skipping');
+          return;
+        }
+        _initialized = true;
+
+        try {
+          setStatus('Messenger ready. Applying conversation attributes...');
+          await setConversationAttributes();
+          Genesys('command', 'Messenger.open', {}, function () {
+            setStatus('Messenger opened. Waiting for conversation...');
+          }, function (err) {
+            console.error('[LeadChat] Messenger.open failed', err);
+            setStatus('Failed to open messenger.');
+          });
+        } catch (err) {
+          console.error('[LeadChat] Initialization failed', err);
+          setStatus('Failed to initialize: ' + (err && err.message ? err.message : String(err)));
+        }
+      });
+
+      Genesys('subscribe', 'MessagingService.conversationStarted', function (event) {
+        var conversationId = event && event.data && event.data.conversationId ? event.data.conversationId : '';
+        if (conversationId) {
+          showLeadConversationId(conversationId);
+          setStatus('Conversation started.');
+        }
+      });
+
+      Genesys('subscribe', 'MessagingService.sessionStarted', function (event) {
+        var conversationId = event && event.data && event.data.conversationId ? event.data.conversationId : '';
+        if (conversationId) showLeadConversationId(conversationId);
+      });
+
+      setStatus('Loading Genesys Messenger...');
+    })();
   </script>
 </body>
 </html>
