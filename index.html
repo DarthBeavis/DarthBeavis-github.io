@@ -18,6 +18,23 @@
     #genesys-messenger { min-height: 500px; border: 1px dashed #ccc; border-radius: 8px; }
   </style>
   <script>
+    // Clear Genesys widget session storage to force a fresh conversation
+    (function() {
+      try {
+        var dbNames = ['gcmessenger', 'genesys-messenger', 'gcmessaging'];
+        dbNames.forEach(function(name) {
+          try { indexedDB.deleteDatabase(name); } catch(e) {}
+        });
+        // Also clear relevant localStorage keys
+        Object.keys(localStorage).forEach(function(k) {
+          if (k.indexOf('genesys') !== -1 || k.indexOf('gcmessenger') !== -1 || k.indexOf('_gcmw') !== -1) {
+            localStorage.removeItem(k);
+          }
+        });
+      } catch(e) {}
+    })();
+  </script>
+  <script>
     (function (g, e, n, es, ys) {
       g['_genesysJs'] = e;
       g[e] = g[e] || function () { (g[e].q = g[e].q || []).push(arguments); };
@@ -136,21 +153,4 @@
         _initialized = true;
         setStatus('Messenger ready. Setting attributes...');
         await setConversationAttributes();
-        Genesys('command', 'Messenger.open', {}, function () {
-          setStatus('Messenger opened. Waiting for conversation...');
-        }, function (err) {
-          console.error('[LeadChat] Messenger.open failed', err);
-          setStatus('Failed to open messenger.');
-        });
-      });
-
-      Genesys('subscribe', 'MessagingService.conversationStarted', function (event) {
-        var conversationId = event && event.data && event.data.conversationId ? event.data.conversationId : '';
-        if (conversationId) setStatus('Conversation started: ' + conversationId);
-      });
-
-      setStatus('Loading Genesys Messenger...');
-    })();
-  </script>
-</body>
-</html>
+        Genesys('command', 'Messenger.open', {}, func
