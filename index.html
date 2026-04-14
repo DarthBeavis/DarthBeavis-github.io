@@ -136,11 +136,22 @@
         _initialized = true;
         setStatus('Messenger ready. Setting attributes...');
         await setConversationAttributes();
-        Genesys('command', 'Messenger.open', {}, function () {
-          setStatus('Messenger opened. Waiting for conversation...');
-        }, function (err) {
-          console.error('[LeadChat] Messenger.open failed', err);
-          setStatus('Failed to open messenger.');
+        // Close any existing session first, then open fresh
+        Genesys('command', 'Messenger.close', {}, function() {
+          Genesys('command', 'Messenger.open', {}, function () {
+            setStatus('Messenger opened. Waiting for conversation...');
+          }, function (err) {
+            console.error('[LeadChat] Messenger.open failed', err);
+            setStatus('Failed to open messenger.');
+          });
+        }, function() {
+          // close failed or nothing to close — open anyway
+          Genesys('command', 'Messenger.open', {}, function () {
+            setStatus('Messenger opened. Waiting for conversation...');
+          }, function (err) {
+            console.error('[LeadChat] Messenger.open failed', err);
+            setStatus('Failed to open messenger.');
+          });
         });
       });
 
