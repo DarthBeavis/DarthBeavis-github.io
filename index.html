@@ -143,6 +143,8 @@
         try {
           setStatus('Messenger ready. Applying conversation attributes...');
           await setConversationAttributes();
+          // End any existing session to force a fresh conversation
+          try { await new Promise(function(r) { Genesys('command', 'Messenger.endSession', {}, r, r); }); } catch(e) {}
           Genesys('command', 'Messenger.open', {}, function () {
             setStatus('Messenger opened. Waiting for conversation...');
           }, function (err) {
