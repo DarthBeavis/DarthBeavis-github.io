@@ -134,24 +134,20 @@
           return;
         }
         _initialized = true;
+        setStatus('Messenger ready. Clearing previous session...');
+        // Clear any stored session to force a fresh conversation
+        try {
+          await new Promise(function(r) {
+            Genesys('command', 'Database.clear', { messaging: {} }, r, r);
+          });
+        } catch(e) { console.log('[LeadChat] Database.clear:', e); }
         setStatus('Messenger ready. Setting attributes...');
         await setConversationAttributes();
-        // Close any existing session first, then open fresh
-        Genesys('command', 'Messenger.close', {}, function() {
-          Genesys('command', 'Messenger.open', {}, function () {
-            setStatus('Messenger opened. Waiting for conversation...');
-          }, function (err) {
-            console.error('[LeadChat] Messenger.open failed', err);
-            setStatus('Failed to open messenger.');
-          });
-        }, function() {
-          // close failed or nothing to close — open anyway
-          Genesys('command', 'Messenger.open', {}, function () {
-            setStatus('Messenger opened. Waiting for conversation...');
-          }, function (err) {
-            console.error('[LeadChat] Messenger.open failed', err);
-            setStatus('Failed to open messenger.');
-          });
+        Genesys('command', 'Messenger.open', {}, function () {
+          setStatus('Messenger opened. Waiting for conversation...');
+        }, function (err) {
+          console.error('[LeadChat] Messenger.open failed', err);
+          setStatus('Failed to open messenger.');
         });
       });
 
