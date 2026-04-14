@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+d<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -70,6 +70,7 @@
       'use strict';
 
       var _initialized = false;
+      var _attrsSet = false;
 
       var params = new URLSearchParams(window.location.search);
       var config = {
@@ -101,16 +102,6 @@
       bindField('employeeIdField',             'employeeIdValue',             config.employeeId);
       bindField('originalConversationIdField', 'originalConversationIdValue', config.originalConversationId);
 
-      function showLeadConversationId(conversationId) {
-        if (!conversationId) return;
-        var field = document.getElementById('leadConversationIdField');
-        var value = document.getElementById('leadConversationIdValue');
-        if (field && value) {
-          value.textContent = conversationId;
-          field.classList.remove('hidden');
-        }
-      }
-
       function dbSetAttribute(key, value) {
         return new Promise(function (resolve, reject) {
           Genesys('command', 'Database.set', {
@@ -120,6 +111,8 @@
       }
 
       async function setConversationAttributes() {
+        if (_attrsSet) return;
+        _attrsSet = true;
         var attrs = {
           queue:                  config.queue,
           agentName:              config.agentName,
@@ -129,43 +122,52 @@
         };
         for (var [key, value] of Object.entries(attrs)) {
           if (!value) continue;
-          await dbSetAttribute(key, value);
+          try {
+            await dbSetAttribute(key, value);
+            console.log('[LeadChat] Set attribute:', key, '=', value);
+          } catch(e) {
+            console.error('[LeadChat] Failed to set attribute:', key, e);
+          }
         }
+        setStatus('Attributes set. Conversation starting...');
       }
 
+      // Open messenger on ready — attributes set BEFORE open
       Genesys('subscribe', 'Messenger.ready', async function () {
         if (_initialized) {
           console.log('[LeadChat] Messenger.ready fired again — skipping');
           return;
         }
         _initialized = true;
+        setStatus('Messenger ready. Setting attributes...');
 
-        try {
-          setStatus('Messenger ready. Applying conversation attributes...');
-          await setConversationAttributes();
-          Genesys('command', 'Messenger.open', {}, function () {
-            setStatus('Messenger opened. Waiting for conversation...');
-          }, function (err) {
-            console.error('[LeadChat] Messenger.open failed', err);
-            setStatus('Failed to open messenger.');
-          });
-        } catch (err) {
-          console.error('[LeadChat] Initialization failed', err);
-          setStatus('Failed to initialize: ' + (err && err.message ? err.message : String(err)));
-        }
+        // Set attributes BEFORE opening — they attach to the next conversation
+        await setConversationAttributes();
+
+        Genesys('command', 'Messenger.open', {}, function () {
+          setStatus('Messenger opened. Waiting for conversation...');
+        }, function (err) {
+          console.error('[LeadChat] Messenger.open failed', err);
+          setStatus('Failed to open messenger.');
+        });
       });
 
-      Genesys('subscribe', 'MessagingService.conversationStarted', function (event) {
+      // Also set attributes again when conversation actually starts
+      // in case Database.set needs to be called post-conversation-creation
+      Genesys('subscribe', 'MessagingService.conversationStarted', async function (event) {
         var conversationId = event && event.data && event.data.conversationId ? event.data.conversationId : '';
+        console.log('[LeadChat] Conversation started:', conversationId);
         if (conversationId) {
-          showLeadConversationId(conversationId);
-          setStatus('Conversation started.');
+          setStatus('Conversation started: ' + conversationId);
+          // Re-set attributes now that conversation exists
+          _attrsSet = false;
+          await setConversationAttributes();
         }
       });
 
       Genesys('subscribe', 'MessagingService.sessionStarted', function (event) {
         var conversationId = event && event.data && event.data.conversationId ? event.data.conversationId : '';
-        if (conversationId) showLeadConversationId(conversationId);
+        if (conversationId) console.log('[LeadChat] Session started:', conversationId);
       });
 
       setStatus('Loading Genesys Messenger...');
