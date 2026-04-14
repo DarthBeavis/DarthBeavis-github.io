@@ -1,4 +1,4 @@
-d<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -70,11 +70,10 @@ d<!DOCTYPE html>
       'use strict';
 
       var _initialized = false;
-      var _attrsSet = false;
 
       var params = new URLSearchParams(window.location.search);
       var config = {
-        queue:                  (params.get('queue')                  || '').trim(),
+        leadQueue:              (params.get('queue')                  || '').trim(),
         agentName:              (params.get('agentName')              || '').trim(),
         employeeId:             (params.get('employeeId')             || '').trim(),
         subject:                (params.get('subject')                || '').trim(),
@@ -96,7 +95,7 @@ d<!DOCTYPE html>
         field.classList.remove('hidden');
       }
 
-      bindField('queueField',                  'queueValue',                  config.queue);
+      bindField('queueField',                  'queueValue',                  config.leadQueue);
       bindField('subjectField',                'subjectValue',                config.subject);
       bindField('agentNameField',              'agentNameValue',              config.agentName);
       bindField('employeeIdField',             'employeeIdValue',             config.employeeId);
@@ -111,10 +110,8 @@ d<!DOCTYPE html>
       }
 
       async function setConversationAttributes() {
-        if (_attrsSet) return;
-        _attrsSet = true;
         var attrs = {
-          queue:                  config.queue,
+          leadQueue:              config.leadQueue,
           agentName:              config.agentName,
           employeeId:             config.employeeId,
           subject:                config.subject,
@@ -129,10 +126,8 @@ d<!DOCTYPE html>
             console.error('[LeadChat] Failed to set attribute:', key, e);
           }
         }
-        setStatus('Attributes set. Conversation starting...');
       }
 
-      // Open messenger on ready — attributes set BEFORE open
       Genesys('subscribe', 'Messenger.ready', async function () {
         if (_initialized) {
           console.log('[LeadChat] Messenger.ready fired again — skipping');
@@ -140,10 +135,7 @@ d<!DOCTYPE html>
         }
         _initialized = true;
         setStatus('Messenger ready. Setting attributes...');
-
-        // Set attributes BEFORE opening — they attach to the next conversation
         await setConversationAttributes();
-
         Genesys('command', 'Messenger.open', {}, function () {
           setStatus('Messenger opened. Waiting for conversation...');
         }, function (err) {
@@ -152,22 +144,9 @@ d<!DOCTYPE html>
         });
       });
 
-      // Also set attributes again when conversation actually starts
-      // in case Database.set needs to be called post-conversation-creation
-      Genesys('subscribe', 'MessagingService.conversationStarted', async function (event) {
+      Genesys('subscribe', 'MessagingService.conversationStarted', function (event) {
         var conversationId = event && event.data && event.data.conversationId ? event.data.conversationId : '';
-        console.log('[LeadChat] Conversation started:', conversationId);
-        if (conversationId) {
-          setStatus('Conversation started: ' + conversationId);
-          // Re-set attributes now that conversation exists
-          _attrsSet = false;
-          await setConversationAttributes();
-        }
-      });
-
-      Genesys('subscribe', 'MessagingService.sessionStarted', function (event) {
-        var conversationId = event && event.data && event.data.conversationId ? event.data.conversationId : '';
-        if (conversationId) console.log('[LeadChat] Session started:', conversationId);
+        if (conversationId) setStatus('Conversation started: ' + conversationId);
       });
 
       setStatus('Loading Genesys Messenger...');
