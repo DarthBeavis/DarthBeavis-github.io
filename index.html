@@ -152,45 +152,40 @@
           return;
         }
         _initialized = true;
-        setStatus('Messenger ready. Opening and sending routing message...');
+        setStatus('Messenger ready. Opening...');
 
-        // Open Messenger first
-        await new Promise(function(resolve, reject) {
-          Genesys('command', 'Messenger.open', {}, resolve, function(err) {
-            // "already opened" is fine
-            console.log('[LeadChat] Messenger.open result:', err);
-            resolve();
-          });
+        Genesys('command', 'Messenger.open', {}, function () {
+          setStatus('Messenger opened. Waiting for conversation...');
+        }, function (err) {
+          console.log('[LeadChat] Messenger.open result:', err);
+          setStatus('Messenger ready. Waiting for conversation...');
         });
-
-        // Build routing message
-        var routingMsg = 'ROUTING'
-          + '|queue=' + (config.queue || '')
-          + '|originalConversationId=' + (config.originalConversationId || '')
-          + '|agentName=' + (config.agentName || '')
-          + '|subject=' + (config.subject || '')
-          + '|employeeId=' + (config.employeeId || '');
-
-        // Send routing message — this starts the conversation and becomes Message.Message.body
-        try {
-          await new Promise(function(resolve, reject) {
-            Genesys('command', 'MessagingService.sendMessage', {
-              message: routingMsg
-            }, resolve, reject);
-          });
-          console.log('[LeadChat] Routing message sent:', routingMsg);
-          setStatus('Routing message sent. Waiting for agent...');
-        } catch(e) {
-          console.error('[LeadChat] Failed to send routing message:', e);
-          setStatus('Error sending routing message: ' + e);
-        }
       });
 
-      // Log conversation start for diagnostics
-      Genesys('subscribe', 'MessagingService.conversationStarted', function (event) {
+      Genesys('subscribe', 'MessagingService.conversationStarted', async function (event) {
         var conversationId = event && event.data && event.data.conversationId ? event.data.conversationId : '';
         if (conversationId) {
-          setStatus('Conversation started: ' + conversationId);
+          setStatus('Conversation started: ' + conversationId + '. Sending routing data...');
+
+          var routingMsg = 'ROUTING'
+            + '|queue=' + (config.queue || '')
+            + '|originalConversationId=' + (config.originalConversationId || '')
+            + '|agentName=' + (config.agentName || '')
+            + '|subject=' + (config.subject || '')
+            + '|employeeId=' + (config.employeeId || '');
+
+          try {
+            await new Promise(function(resolve, reject) {
+              Genesys('command', 'MessagingService.sendMessage', {
+                message: routingMsg
+              }, resolve, reject);
+            });
+            console.log('[LeadChat] Routing message sent:', routingMsg);
+            setStatus('Routing message sent. Waiting for agent...');
+          } catch(e) {
+            console.error('[LeadChat] Failed to send routing message:', e);
+            setStatus('Error sending routing message: ' + e);
+          }
         }
       });
 
