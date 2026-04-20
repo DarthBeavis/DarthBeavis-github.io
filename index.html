@@ -18,18 +18,19 @@
     #genesys-messenger { min-height: 500px; border: 1px dashed #ccc; border-radius: 8px; }
   </style>
   <script>
-    // Clear Genesys widget session storage to force a fresh conversation
+    // Force fresh Genesys session on every load
     (function() {
       try {
-        var dbNames = ['gcmessenger', 'genesys-messenger', 'gcmessaging'];
-        dbNames.forEach(function(name) {
-          try { indexedDB.deleteDatabase(name); } catch(e) {}
-        });
-        // Also clear relevant localStorage keys
-        Object.keys(localStorage).forEach(function(k) {
-          if (k.indexOf('genesys') !== -1 || k.indexOf('gcmessenger') !== -1 || k.indexOf('_gcmw') !== -1) {
-            localStorage.removeItem(k);
-          }
+        // Clear all localStorage keys for this domain
+        localStorage.clear();
+        // Clear all IndexedDB databases
+        if (window.indexedDB && indexedDB.databases) {
+          indexedDB.databases().then(function(dbs) {
+            dbs.forEach(function(db) { indexedDB.deleteDatabase(db.name); });
+          });
+        }
+        ['gcmessenger','genesys-messenger','gcmessaging','gcm','_genesys'].forEach(function(n) {
+          try { indexedDB.deleteDatabase(n); } catch(e) {}
         });
       } catch(e) {}
     })();
@@ -153,4 +154,41 @@
         _initialized = true;
         setStatus('Messenger ready. Setting attributes...');
         await setConversationAttributes();
-        Genesys('command', 'Messenger.open', {}, func
+        Genesys('command', 'Messenger.open', {}, function () {
+          setStatus('Messenger opened. Waiting for conversation...');
+        }, function (err) {
+          // "already opened" is fine — widget is visible, conversation will start
+          console.log('[LeadChat] Messenger.open result:', err);
+          setStatus('Messenger ready. Waiting for conversation...');
+        });
+      });
+
+      Genesys('subscribe', 'MessagingService.conversationStarted', async function (event) {
+        var conversationId = event && event.data && event.data.conversationId ? event.data.conversationId : '';
+        if (conversationId) {
+          setStatus('Conversation started: ' + conversationId);
+          // Send routing data as first message so flow can read it
+          // Format: ROUTING|queue=CS_Houston_LeadChat|originalConversationId=xxx
+          var routingMsg = 'ROUTING|queue=' + (config.queue || '') +
+                           '|originalConversationId=' + (config.originalConversationId || '') +
+                           '|agentName=' + (config.agentName || '') +
+                           '|subject=' + (config.subject || '');
+          try {
+            await new Promise(function(resolve, reject) {
+              Genesys('command', 'MessagingService.sendMessage', {
+                message: routingMsg,
+                metadata: {}
+              }, resolve, reject);
+            });
+            console.log('[LeadChat] Routing message sent:', routingMsg);
+          } catch(e) {
+            console.error('[LeadChat] Failed to send routing message:', e);
+          }
+        }
+      });
+
+      setStatus('Loading Genesys Messenger...');
+    })();
+  </script>
+</body>
+</html>
